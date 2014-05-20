@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"time"
@@ -13,7 +12,8 @@ var (
 	command   *exec.Cmd
 	startTime time.Time
 	modTime   time.Time
-	writer    io.Writer = ioutil.Discard
+	writer    io.Writer = os.Stdout
+	done                = make(chan error)
 )
 
 func checkError(err error) {
@@ -42,13 +42,21 @@ func runBin(bin string, args []string) error {
 
 	go io.Copy(writer, stdout)
 	go io.Copy(writer, stderr)
-	time.Sleep(250 * time.Millisecond)
+
+	go func() {
+		done <- command.Wait()
+	}()
+
 	return nil
 }
 
 func kill() error {
-	command.Process.Release()
-	return command.Process.Kill()
+	err := command.Process.Kill()
+	if err != nil {
+		return err
+	}
+
+	return <-done // allow goroutine to exit
 }
 
 func main() {
@@ -91,8 +99,8 @@ func main() {
 		if modTime.After(startTime) {
 			fmt.Println("Reloading the app...")
 
-			err = kill()
-			checkError(err)
+			// Deliberately ignoring errors here.
+			kill()
 
 			err = runBin(bin, args)
 			checkError(err)
