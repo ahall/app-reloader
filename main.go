@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"time"
@@ -86,6 +87,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	log.Println("Initially starting the app...")
 	err = runBin(bin, args)
 	checkError(err)
 
@@ -97,13 +99,20 @@ func main() {
 
 		modTime = stat.ModTime()
 		if modTime.After(startTime) {
-			fmt.Println("Reloading the app...")
+			log.Println("Reloading the app...")
 
 			// Deliberately ignoring errors here.
 			kill()
 
+			// Need sleeping before starting the app or it will somewtimes fail.
+			// Need to investigate why exactly, some timing issue.
+			time.Sleep(500 * time.Millisecond)
+			log.Println("App killed, starting it again...")
+
 			err = runBin(bin, args)
 			checkError(err)
+
+			log.Println("Started and up and running...")
 		}
 	}
 }
