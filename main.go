@@ -95,7 +95,10 @@ func main() {
 		time.Sleep(500 * time.Millisecond)
 
 		stat, err := os.Stat(bin)
-		checkError(err)
+		if err != nil {
+			// Not found
+			continue
+		}
 
 		modTime = stat.ModTime()
 		if modTime.After(startTime) {
@@ -108,6 +111,12 @@ func main() {
 			// Need to investigate why exactly, some timing issue.
 			time.Sleep(500 * time.Millisecond)
 			log.Println("App killed, starting it again...")
+
+			stat, err = os.Stat(bin)
+			if err != nil {
+				// Not found
+				continue
+			}
 
 			err = runBin(bin, args)
 			checkError(err)
