@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"time"
+	"strings"
 )
 
 var (
@@ -91,6 +92,8 @@ func main() {
 	err = runBin(bin, args)
 	checkError(err)
 
+	nbusy := 0
+
 	for {
 		time.Sleep(500 * time.Millisecond)
 
@@ -109,6 +112,7 @@ func main() {
 
 			// Need sleeping before starting the app or it will somewtimes fail.
 			// Need to investigate why exactly, some timing issue.
+			// Might be caused by https://github.com/golang/go/issues/22220
 			time.Sleep(500 * time.Millisecond)
 			log.Println("App killed, starting it again...")
 
@@ -119,8 +123,15 @@ func main() {
 			}
 
 			err = runBin(bin, args)
+			// https://github.com/golang/go/issues/22220
+			if err != nil && nbusy < 3 && strings.Contains(err.Error(), "text file busy") {
+				time.Sleep(100 * time.Millisecond << uint(nbusy))
+				nbusy++
+				continue
+			}
 			checkError(err)
 
+			nbusy = 0
 			log.Println("Started and up and running...")
 		}
 	}
