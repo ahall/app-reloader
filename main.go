@@ -53,6 +53,10 @@ func runBin(bin string, args []string) error {
 }
 
 func kill() error {
+	if command == nil {
+		return nil
+	}
+
 	err := command.Process.Kill()
 	if err != nil {
 		return err
@@ -125,6 +129,7 @@ func main() {
 			err = runBin(bin, args)
 			// https://github.com/golang/go/issues/22220
 			if err != nil && nbusy < 3 && strings.Contains(err.Error(), "text file busy") {
+				log.Println("Text file busy - retry in a bit")
 				time.Sleep(100 * time.Millisecond << uint(nbusy))
 				nbusy++
 				continue
