@@ -25,17 +25,17 @@ func checkError(err error) {
 }
 
 func runBin(bin string, args []string) error {
-	command = exec.Command(bin, args...)
-	stdout, err := command.StdoutPipe()
+	cmd := exec.Command(bin, args...)
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
 	}
-	stderr, err := command.StderrPipe()
+	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return err
 	}
 
-	err = command.Start()
+	err = cmd.Start()
 	if err != nil {
 		return err
 	}
@@ -46,14 +46,15 @@ func runBin(bin string, args []string) error {
 	go io.Copy(writer, stderr)
 
 	go func() {
-		done <- command.Wait()
+		done <- cmd.Wait()
 	}()
 
+	command = cmd
 	return nil
 }
 
 func kill() error {
-	if command == nil {
+	if command == nil || command.Process == nil {
 		return nil
 	}
 
@@ -113,6 +114,7 @@ func main() {
 
 			// Deliberately ignoring errors here.
 			kill()
+			command = nil
 
 			// Need sleeping before starting the app or it will somewtimes fail.
 			// Need to investigate why exactly, some timing issue.
